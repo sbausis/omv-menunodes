@@ -1,0 +1,113 @@
+#!/bin/bash
+
+#set -e
+#set -x
+
+NODE_PAT='/OMV.WorkspaceManager.registerNode\({/,/}\);/'
+PANEL_PAT='/OMV.WorkspaceManager.registerPanel\({/,/}\);/'
+
+VALUES_PAT='s/.*({[[:space:]]*\(.*\)[[:space:]]*});*/\1/'
+
+ID_PAT='s/.*id: "*\([0-9a-zA-Z/_]*\)"*,*.*/\1/'
+PATH_PAT='s/.*path: "*\([0-9a-zA-Z/_]*\)"*,*.*/\1/'
+ICON16_PAT='s/.*icon16: "*\([0-9a-zA-Z/_\-\.]*\)"*,*.*/\1/'
+ICONSVG_PAT='s/.*iconSvg: "*\([0-9a-zA-Z/_\-\.]*\)"*,*.*/\1/'
+TEXT_PAT='s/.*text: _("*\([0-9a-zA-Z ]*\)"*),*.*/\1/'
+TEXT_PAT='s/.*text: _("\(.*\)"),*.*/\1/'
+POSITION_PAT='s/.*position: "*\([0-9]*\)"*,*.*/\1/'
+CLASSNAME_PAT='s/.*className: "*\([0-9a-zA-Z\.]*\)"*,*.*/\1/'
+
+SCRIPTDIR=$(dirname $0)
+
+if [ "$1" == "clean" ]; then
+	rm -f "${SCRIPTDIR}/cached_nodes.list" "${SCRIPTDIR}/cached_panels.list"
+fi
+
+if [ ! -f "${SCRIPTDIR}/cached_nodes.list" ] || [ ! -f "${SCRIPTDIR}/cached_panels.list" ]; then
+	rm -f "${SCRIPTDIR}/cached_nodes.list" "${SCRIPTDIR}/cached_panels.list"
+	
+	FILES=$(find var/www/openmediavault/js/omv/module -type f -name "*.js")
+	for FILE in ${FILES}; do
+
+		#echo "FILE = ${FILE}"
+
+		NODES=$(cat "${FILE}" | awk "${NODE_PAT}" | tr '\n' ' ')
+		NODES_CNT=`expr $(echo "${NODES}" | awk -F";" '{print NF}') - 1`
+		while [ ${NODES_CNT} -gt 0 ]; do
+
+			NODE=$(echo "${NODES}" | awk -F";" "{print \$${NODES_CNT}}")
+			NODE_VALUES=$(echo "${NODE}" | sed -e "${VALUES_PAT}")
+			NODE_ID=$(echo "${NODE_VALUES}" | sed "${ID_PAT}")
+			NODE_PATH=$(echo "${NODE_VALUES}" | sed "${PATH_PAT}")
+			NODE_ICON16=$(echo "${NODE_VALUES}" | sed "${ICON16_PAT}")
+			NODE_ICONSVG=$(echo "${NODE_VALUES}" | sed "${ICONSVG_PAT}")
+			NODE_TEXT=$(echo "${NODE_VALUES}" | sed "${TEXT_PAT}")
+			NODE_POSITION=$(echo "${NODE_VALUES}" | sed "${POSITION_PAT}")
+
+			[ "${NODE_ID}" == "${NODE_VALUES}" ] && NODE_ID=""
+			[ "${NODE_PATH}" == "${NODE_VALUES}" ] && NODE_PATH=""
+			[ "${NODE_ICON16}" == "${NODE_VALUES}" ] && NODE_ICON16=""
+			[ "${NODE_ICONSVG}" == "${NODE_VALUES}" ] && NODE_ICONSVG=""
+			[ "${NODE_TEXT}" == "${NODE_VALUES}" ] && NODE_TEXT=""
+			[ "${NODE_POSITION}" == "${NODE_VALUES}" ] && NODE_POSITION=""
+			
+			echo "FILE=\"${FILE}\";NODES_CNT=\"${NODES_CNT}\";NODE_ID=\"${NODE_ID}\";NODE_PATH=\"${NODE_PATH}\";NODE_ICON16=\"${NODE_ICON16}\";NODE_ICONSVG=\"${NODE_ICONSVG}\";NODE_TEXT=\"${NODE_TEXT}\";NODE_POSITION=\"${NODE_POSITION}\";" >> ${SCRIPTDIR}/cached_nodes.list
+
+			NODES_CNT=$(expr ${NODES_CNT} - 1)
+		done
+
+		PANELS=$(cat "${FILE}" | awk "${PANEL_PAT}" | tr '\n' ' ')
+		PANELS_CNT=`expr $(echo "${PANELS}" | awk -F";" '{print NF}') - 1`
+		while [ ${PANELS_CNT} -gt 0 ]; do
+
+			PANEL=$(echo "${PANELS}" | awk -F";" "{print \$${PANELS_CNT}}")
+			PANEL_VALUES=$(echo "${PANEL}" | sed -e "${VALUES_PAT}")
+			PANEL_ID=$(echo "${PANEL_VALUES}" | sed "${ID_PAT}")
+			PANEL_PATH=$(echo "${PANEL_VALUES}" | sed "${PATH_PAT}")
+			PANEL_TEXT=$(echo "${PANEL_VALUES}" | sed "${TEXT_PAT}")
+			PANEL_POSITION=$(echo "${PANEL_VALUES}" | sed "${POSITION_PAT}")
+			PANEL_CLASSNAME=$(echo "${PANEL_VALUES}" | sed "${CLASSNAME_PAT}")
+
+			[ "${PANEL_ID}" == "${PANEL_VALUES}" ] && PANEL_ID=""
+			[ "${PANEL_PATH}" == "${PANEL_VALUES}" ] && PANEL_PATH=""
+			[ "${PANEL_TEXT}" == "${PANEL_VALUES}" ] && PANEL_TEXT=""
+			[ "${PANEL_POSITION}" == "${PANEL_VALUES}" ] && PANEL_POSITION=""
+			[ "${PANEL_CLASSNAME}" == "${PANEL_VALUES}" ] && PANEL_CLASSNAME=""
+			
+			echo "FILE=\"${FILE}\";PANELS_CNT=\"${PANELS_CNT}\";PANEL_ID=\"${PANEL_ID}\";PANEL_PATH=\"${PANEL_PATH}\";PANEL_TEXT=\"${PANEL_TEXT}\";PANEL_POSITION=\"${PANEL_POSITION}\";PANEL_CLASSNAME=\"${PANEL_CLASSNAME}\";" >> ${SCRIPTDIR}/cached_panels.list
+
+			PANELS_CNT=$(expr ${PANELS_CNT} - 1)
+		done
+
+		#echo ""
+	done
+
+fi
+
+#if [ "$1" == "list" ]; then
+	IFS=$'\n'
+	(for NODE in `cat ${SCRIPTDIR}/cached_nodes.list`; do
+		eval "${NODE}"
+		
+		[ "${NODE_PATH}" == "/" ] && NAME="${NODE_PATH}${NODE_ID}" || NAME="${NODE_PATH}/${NODE_ID}"
+		echo "${NAME}"
+		
+		for PANEL in `cat ${SCRIPTDIR}/cached_panels.list`; do
+			eval "${PANEL}"
+			
+			[ "${NAME}" == "${PANEL_PATH}" ] && echo "${PANEL_PATH}/${PANEL_ID}"
+			
+		done
+		
+	done) | sort
+#fi
+
+#for PANEL in `cat ${SCRIPTDIR}/cached_panels.list`; do
+#	eval "${PANEL}"
+#	
+#	[ "${PANEL_PATH}" == "/" ] && NAME="${PANEL_PATH}${PANEL_ID}" || NAME="${PANEL_PATH}/${PANEL_ID}"
+#	[ "${NAME}" == "/privilege/user" ] && echo "${PANEL_POSITION} ${PANEL_TEXT}"
+#	
+#done
+
+exit 0
