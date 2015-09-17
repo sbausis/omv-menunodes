@@ -10,16 +10,18 @@ SCRIPTDIR=$(cd `dirname $0` && pwd)
 ROOTDIR=""
 SUBDIR="admin"
 NODE_INFO=""
+TREE_ROOT=""
 CLEAN=1
 LIST=1
 LIST_NODES=1
 LIST_PANELS=1
 
-while getopts ":r:s:i:clNP" opt; do
+while getopts ":r:s:i:t:clNP" opt; do
 	case $opt in
 		r) ROOTDIR="$OPTARG" ;;
 		s) SUBDIR="$OPTARG" ;;
 		i) NODE_INFO="$OPTARG" ;;
+		t) TREE_ROOT="$OPTARG" ;;
 		c) CLEAN=0 ;;
 		l) LIST=0 ;;
 		N) LIST_NODES=0 ;;
@@ -182,6 +184,26 @@ function node_info() {
 	)
 }
 
+function tree_root() {
+	local NODE_NAME="$1"
+	(IFS=$'\n'; 
+			for NODE in `cat ${NODE_CACHE_FILE}`; do
+			eval "${NODE}"
+			[ "${NODE_PATH}" == "/" ] && NAME="${NODE_PATH}${NODE_ID}" || NAME="${NODE_PATH}/${NODE_ID}"
+			if [ "${NAME}" != "${NAME#${NODE_NAME}}" ]; then
+				echo "${NAME}"
+			fi
+		done
+		for PANEL in `cat ${PANEL_CACHE_FILE}`; do
+			eval "${PANEL}"
+			[ "${PANEL_PATH}" == "/" ] && NAME="${PANEL_PATH}${PANEL_ID}" || NAME="${PANEL_PATH}/${PANEL_ID}"
+			if [ "${NAME}" != "${NAME#${NODE_NAME}}" ]; then
+				echo "${NAME}"
+			fi
+		done
+	) | sort
+}
+
 ################################################################################
 
 [ "${CLEAN}" == "0" ] && clean_cache
@@ -194,6 +216,7 @@ fi
 [ "${LIST}" == "0" ] && list_all
 [ "${LIST_NODES}" == "0" ] && list_nodes
 [ "${LIST_PANELS}" == "0" ] && list_panels
+[ -n "${TREE_ROOT}" ] && tree_root "${TREE_ROOT}"
 [ -n "${NODE_INFO}" ] && node_info "${NODE_INFO}"
 
 ################################################################################
