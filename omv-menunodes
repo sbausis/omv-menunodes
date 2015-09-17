@@ -9,15 +9,17 @@ SCRIPTDIR=$(cd `dirname $0` && pwd)
 
 ROOTDIR=""
 SUBDIR="admin"
+NODE_INFO=""
 CLEAN=1
 LIST=1
 LIST_NODES=1
 LIST_PANELS=1
 
-while getopts ":r:s:clNP" opt; do
+while getopts ":r:s:i:clNP" opt; do
 	case $opt in
 		r) ROOTDIR="$OPTARG" ;;
 		s) SUBDIR="$OPTARG" ;;
+		i) NODE_INFO="$OPTARG" ;;
 		c) CLEAN=0 ;;
 		l) LIST=0 ;;
 		N) LIST_NODES=0 ;;
@@ -33,6 +35,8 @@ MODULEDIR="${ROOTDIR}/var/www/openmediavault/js/omv/module/${SUBDIR}"
 [ -d "${MODULEDIR}" ] || exit 1
 
 CACHEDIR="/tmp"
+NODE_CACHE_FILE="${CACHEDIR}/cached_${SUBDIR}_nodes.list"
+PANEL_CACHE_FILE="${CACHEDIR}/cached_${SUBDIR}_panels.list"
 
 ################################################################################
 
@@ -53,7 +57,7 @@ CLASSNAME_PAT='s/.*className: "*\([0-9a-zA-Z\.]*\)"*,*.*/\1/'
 ################################################################################
 
 function clean_cache() {
-	rm -f "${CACHEDIR}/cached_${SUBDIR}_nodes.list" "${CACHEDIR}/cached_${SUBDIR}_panels.list"
+	rm -f "${NODE_CACHE_FILE}" "${PANEL_CACHE_FILE}"
 }
 
 function generate_cache() {
@@ -83,7 +87,7 @@ function generate_cache() {
 			[ "${NODE_TEXT}" == "${NODE_VALUES}" ] && NODE_TEXT=""
 			[ "${NODE_POSITION}" == "${NODE_VALUES}" ] && NODE_POSITION=""
 			
-			echo "FILE=\"${FILENAME}\";NODES_CNT=\"${NODES_CNT}\";NODE_ID=\"${NODE_ID}\";NODE_PATH=\"${NODE_PATH}\";NODE_ICON16=\"${NODE_ICON16}\";NODE_ICONSVG=\"${NODE_ICONSVG}\";NODE_TEXT=\"${NODE_TEXT}\";NODE_POSITION=\"${NODE_POSITION}\";" >> ${CACHEDIR}/cached_${SUBDIR}_nodes.list
+			echo "FILE=\"${FILENAME}\";NODES_CNT=\"${NODES_CNT}\";NODE_ID=\"${NODE_ID}\";NODE_PATH=\"${NODE_PATH}\";NODE_ICON16=\"${NODE_ICON16}\";NODE_ICONSVG=\"${NODE_ICONSVG}\";NODE_TEXT=\"${NODE_TEXT}\";NODE_POSITION=\"${NODE_POSITION}\";" >> ${NODE_CACHE_FILE}
 
 			NODES_CNT=$(expr ${NODES_CNT} - 1)
 		done
@@ -106,7 +110,7 @@ function generate_cache() {
 			[ "${PANEL_POSITION}" == "${PANEL_VALUES}" ] && PANEL_POSITION=""
 			[ "${PANEL_CLASSNAME}" == "${PANEL_VALUES}" ] && PANEL_CLASSNAME=""
 			
-			echo "FILE=\"${FILENAME}\";PANELS_CNT=\"${PANELS_CNT}\";PANEL_ID=\"${PANEL_ID}\";PANEL_PATH=\"${PANEL_PATH}\";PANEL_TEXT=\"${PANEL_TEXT}\";PANEL_POSITION=\"${PANEL_POSITION}\";PANEL_CLASSNAME=\"${PANEL_CLASSNAME}\";" >> ${CACHEDIR}/cached_${SUBDIR}_panels.list
+			echo "FILE=\"${FILENAME}\";PANELS_CNT=\"${PANELS_CNT}\";PANEL_ID=\"${PANEL_ID}\";PANEL_PATH=\"${PANEL_PATH}\";PANEL_TEXT=\"${PANEL_TEXT}\";PANEL_POSITION=\"${PANEL_POSITION}\";PANEL_CLASSNAME=\"${PANEL_CLASSNAME}\";" >> ${PANEL_CACHE_FILE}
 
 			PANELS_CNT=$(expr ${PANELS_CNT} - 1)
 		done
@@ -116,19 +120,19 @@ function generate_cache() {
 }
 
 function list_all() {
-	(IFS=$'\n'; for NODE in `cat ${CACHEDIR}/cached_${SUBDIR}_nodes.list`; do
+	(IFS=$'\n'; for NODE in `cat ${NODE_CACHE_FILE}`; do
 		eval "${NODE}"
 		[ "${NODE_PATH}" == "/" ] && NAME="${NODE_PATH}${NODE_ID}" || NAME="${NODE_PATH}/${NODE_ID}"
 		echo "${NAME}"
-		for PANEL in `cat ${CACHEDIR}/cached_${SUBDIR}_panels.list`; do
+		for PANEL in `cat ${PANEL_CACHE_FILE}`; do
 			eval "${PANEL}"
-			[ "${NAME}" == "${PANEL_PATH}" ] && echo "${PANEL_PATH}/${PANEL_ID}"
+			[ "${NAME}" == "${PANEL_PATH}" ] && echo "${PANEL_PATH}/${PANEL_ID}" && break
 		done
 	done) | sort
 }
 
 function list_nodes() {
-	(IFS=$'\n'; for NODE in `cat ${CACHEDIR}/cached_${SUBDIR}_nodes.list`; do
+	(IFS=$'\n'; for NODE in `cat ${NODE_CACHE_FILE}`; do
 		eval "${NODE}"
 		[ "${NODE_PATH}" == "/" ] && NAME="${NODE_PATH}${NODE_ID}" || NAME="${NODE_PATH}/${NODE_ID}"
 		echo "${NAME}"
@@ -136,18 +140,53 @@ function list_nodes() {
 }
 
 function list_panels() {
-	(IFS=$'\n'; for PANEL in `cat ${CACHEDIR}/cached_${SUBDIR}_panels.list`; do
+	(IFS=$'\n'; for PANEL in `cat ${PANEL_CACHE_FILE}`; do
 		eval "${PANEL}"
 		[ "${PANEL_PATH}" == "/" ] && NAME="${PANEL_PATH}${PANEL_ID}" || NAME="${PANEL_PATH}/${PANEL_ID}"
 		echo "${NAME}"
 	done) | sort
 }
 
+function node_info() {
+	local NODE_NAME="$1"
+	local NODE_FOUND=1
+	(IFS=$'\n'; 
+		for NODE in `cat ${NODE_CACHE_FILE}`; do
+			eval "${NODE}"
+			[ "${NODE_PATH}" == "/" ] && NAME="${NODE_PATH}${NODE_ID}" || NAME="${NODE_PATH}/${NODE_ID}"
+			if [ "${NODE_NAME}" == "${NAME}" ]; then
+				echo "NODE_ID=${NODE_ID}"
+				echo "NODE_PATH=${NODE_PATH}"
+				echo "NODE_ICON16=${NODE_ICON16}"
+				echo "NODE_ICONSVG=${NODE_ICONSVG}"
+				echo "NODE_TEXT=${NODE_TEXT}"
+				echo "NODE_POSITION=${NODE_POSITION}"
+				NODE_FOUND=0
+				break
+			fi
+		done
+		[ "${NODE_FOUND}" == "0" ] && return
+		for PANEL in `cat ${PANEL_CACHE_FILE}`; do
+			eval "${PANEL}"
+			[ "${PANEL_PATH}" == "/" ] && NAME="${PANEL_PATH}${PANEL_ID}" || NAME="${PANEL_PATH}/${PANEL_ID}"
+			if [ "${NODE_NAME}" == "${NAME}" ]; then
+				echo "PANEL_ID=${PANEL_ID}"
+				echo "PANEL_PATH=${PANEL_PATH}"
+				echo "PANEL_TEXT=${PANEL_TEXT}"
+				echo "PANEL_POSITION=${PANEL_POSITION}"
+				echo "PANEL_CLASSNAME=${PANEL_CLASSNAME}"
+				NODE_FOUND=0
+				break
+			fi
+		done
+	)
+}
+
 ################################################################################
 
 [ "${CLEAN}" == "0" ] && clean_cache
 
-if [ ! -f "${CACHEDIR}/cached_${SUBDIR}_nodes.list" ] || [ ! -f "${CACHEDIR}/cached_${SUBDIR}_panels.list" ]; then
+if [ ! -f "${NODE_CACHE_FILE}" ] || [ ! -f "${PANEL_CACHE_FILE}" ]; then
 	clean_cache
 	generate_cache
 fi
@@ -155,10 +194,11 @@ fi
 [ "${LIST}" == "0" ] && list_all
 [ "${LIST_NODES}" == "0" ] && list_nodes
 [ "${LIST_PANELS}" == "0" ] && list_panels
+[ -n "${NODE_INFO}" ] && node_info "${NODE_INFO}"
 
 ################################################################################
 
-#for PANEL in `cat ${CACHEDIR}/cached_${SUBDIR}_panels.list`; do
+#for PANEL in `cat ${PANEL_CACHE_FILE}`; do
 #	eval "${PANEL}"
 #	
 #	[ "${PANEL_PATH}" == "/" ] && NAME="${PANEL_PATH}${PANEL_ID}" || NAME="${PANEL_PATH}/${PANEL_ID}"
