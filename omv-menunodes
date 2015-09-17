@@ -46,15 +46,11 @@ CLASSNAME_PAT='s/.*className: "*\([0-9a-zA-Z\.]*\)"*,*.*/\1/'
 
 ################################################################################
 
-if [ "${CLEAN}" == "0" ]; then
+function clean_cache() {
 	rm -f "${CACHEDIR}/cached_nodes.list" "${CACHEDIR}/cached_panels.list"
-fi
+}
 
-################################################################################
-
-if [ ! -f "${CACHEDIR}/cached_nodes.list" ] || [ ! -f "${CACHEDIR}/cached_panels.list" ]; then
-	rm -f "${CACHEDIR}/cached_nodes.list" "${CACHEDIR}/cached_panels.list"
-	
+function generate_cache() {
 	FILES=$(find ${MODULEDIR} -type f -name "*.js")
 	for FILE in ${FILES}; do
 
@@ -110,12 +106,9 @@ if [ ! -f "${CACHEDIR}/cached_nodes.list" ] || [ ! -f "${CACHEDIR}/cached_panels
 
 		#echo ""
 	done
+}
 
-fi
-
-################################################################################
-
-if [ "${LIST}" == "0" ]; then
+function list_nodes() {
 	IFS=$'\n'
 	(for NODE in `cat ${CACHEDIR}/cached_nodes.list`; do
 		eval "${NODE}"
@@ -131,7 +124,18 @@ if [ "${LIST}" == "0" ]; then
 		done
 		
 	done) | sort
+}
+
+################################################################################
+
+[ "${CLEAN}" == "0" ] && clean_cache
+
+if [ ! -f "${CACHEDIR}/cached_nodes.list" ] || [ ! -f "${CACHEDIR}/cached_panels.list" ]; then
+	clean_cache
+	generate_cache
 fi
+
+[ "${LIST}" == "0" ] && list_nodes
 
 ################################################################################
 
