@@ -149,10 +149,20 @@ function generate_cache() {
 	done
 }
 
+################################################################################
+
+function get_name() {
+	local NODE_PATH="$1"
+	local NODE_ID="$2"
+	local NODE_NAME=""
+	[ "${NODE_PATH}" == "/" ] && NODE_NAME="${NODE_PATH}${NODE_ID}" || NODE_NAME="${NODE_PATH}/${NODE_ID}"
+	echo "${NODE_NAME}"
+}
+
 function list_all() {
 	(IFS=$'\n'; for NODE in `cat ${NODE_CACHE_FILE}`; do
 		eval "${NODE}"
-		[ "${NODE_PATH}" == "/" ] && NAME="${NODE_PATH}${NODE_ID}" || NAME="${NODE_PATH}/${NODE_ID}"
+		NAME=$(get_name "${NODE_PATH}" "${NODE_ID}")
 		echo "${NAME}"
 		for PANEL in `cat ${PANEL_CACHE_FILE}`; do
 			eval "${PANEL}"
@@ -164,7 +174,7 @@ function list_all() {
 function list_nodes() {
 	(IFS=$'\n'; for NODE in `cat ${NODE_CACHE_FILE}`; do
 		eval "${NODE}"
-		[ "${NODE_PATH}" == "/" ] && NAME="${NODE_PATH}${NODE_ID}" || NAME="${NODE_PATH}/${NODE_ID}"
+		NAME=$(get_name "${NODE_PATH}" "${NODE_ID}")
 		echo "${NAME}"
 	done) | sort
 }
@@ -172,7 +182,7 @@ function list_nodes() {
 function list_panels() {
 	(IFS=$'\n'; for PANEL in `cat ${PANEL_CACHE_FILE}`; do
 		eval "${PANEL}"
-		[ "${PANEL_PATH}" == "/" ] && NAME="${PANEL_PATH}${PANEL_ID}" || NAME="${PANEL_PATH}/${PANEL_ID}"
+		NAME=$(get_name "${PANEL_PATH}" "${PANEL_ID}")
 		echo "${NAME}"
 	done) | sort
 }
@@ -183,7 +193,7 @@ function node_info() {
 	(IFS=$'\n'; 
 		for NODE in `cat ${NODE_CACHE_FILE}`; do
 			eval "${NODE}"
-			[ "${NODE_PATH}" == "/" ] && NAME="${NODE_PATH}${NODE_ID}" || NAME="${NODE_PATH}/${NODE_ID}"
+			NAME=$(get_name "${NODE_PATH}" "${NODE_ID}")
 			if [ "${NODE_NAME}" == "${NAME}" ]; then
 				echo "NODE_ID=${NODE_ID}"
 				echo "NODE_PATH=${NODE_PATH}"
@@ -198,7 +208,7 @@ function node_info() {
 		[ "${NODE_FOUND}" == "0" ] && return
 		for PANEL in `cat ${PANEL_CACHE_FILE}`; do
 			eval "${PANEL}"
-			[ "${PANEL_PATH}" == "/" ] && NAME="${PANEL_PATH}${PANEL_ID}" || NAME="${PANEL_PATH}/${PANEL_ID}"
+			NAME=$(get_name "${PANEL_PATH}" "${PANEL_ID}")
 			if [ "${NODE_NAME}" == "${NAME}" ]; then
 				echo "PANEL_ID=${PANEL_ID}"
 				echo "PANEL_PATH=${PANEL_PATH}"
@@ -217,14 +227,14 @@ function tree_root() {
 	(IFS=$'\n'; 
 			for NODE in `cat ${NODE_CACHE_FILE}`; do
 			eval "${NODE}"
-			[ "${NODE_PATH}" == "/" ] && NAME="${NODE_PATH}${NODE_ID}" || NAME="${NODE_PATH}/${NODE_ID}"
+			NAME=$(get_name "${NODE_PATH}" "${NODE_ID}")
 			if [ "${NAME}" != "${NAME#${NODE_NAME}}" ]; then
 				echo "${NAME}"
 			fi
 		done
 		for PANEL in `cat ${PANEL_CACHE_FILE}`; do
 			eval "${PANEL}"
-			[ "${PANEL_PATH}" == "/" ] && NAME="${PANEL_PATH}${PANEL_ID}" || NAME="${PANEL_PATH}/${PANEL_ID}"
+			NAME=$(get_name "${PANEL_PATH}" "${PANEL_ID}")
 			if [ "${NAME}" != "${NAME#${NODE_NAME}}" ]; then
 				echo "${NAME}"
 			fi
@@ -235,50 +245,48 @@ function tree_root() {
 function override() {
 	local NODE_NAME="$1"
 	local NODE_FOUND=1
-	#if [ -n "${OVERRIDE_PATH}" ] || [ "${OVERRIDE_DELETE}" != "1" ]; then
-		(IFS=$'\n'; 
-			for NODE in `cat ${NODE_CACHE_FILE}`; do
-				eval "${NODE}"
-				[ "${NODE_PATH}" == "/" ] && NAME="${NODE_PATH}${NODE_ID}" || NAME="${NODE_PATH}/${NODE_ID}"
-				if [ "${NODE_NAME}" == "${NAME}" ]; then
-					
-					echo "OMV.WorkspaceManager.registerNodeOverride({"
-					[ -n "${NODE_ID}" ] 			&& echo "	id: \"${NODE_ID}\","
-					[ -n "${NODE_PATH}" ] 			&& echo "	path: \"${NODE_PATH}\","
-					#[ -n "${NODE_ICON16}" ] 		&& echo "	icon16: \"${NODE_ICON16}\","
-					#[ -n "${NODE_ICONSVG}" ] 		&& echo "	iconSvg: \"${NODE_ICONSVG}\","
-					[ -n "${OVERRIDE_TEXT}" ] 		&& echo "	text: _(\"${OVERRIDE_TEXT}\"),"
-					[ -n "${OVERRIDE_POSITION}" ] 	&& echo "	position: ${OVERRIDE_POSITION}"
-					[ -n "${OVERRIDE_PATH}" ] 		&& echo "	newpath: \"${OVERRIDE_PATH}\","
-					[ "${OVERRIDE_DELETE}" != "1" ] && echo "	del: true,"
-					echo "});"
+	(IFS=$'\n'; 
+		for NODE in `cat ${NODE_CACHE_FILE}`; do
+			eval "${NODE}"
+			NAME=$(get_name "${NODE_PATH}" "${NODE_ID}")
+			if [ "${NODE_NAME}" == "${NAME}" ]; then
+				
+				echo "OMV.WorkspaceManager.registerNodeOverride({"
+				[ -n "${NODE_ID}" ] 			&& echo "	id: \"${NODE_ID}\","
+				[ -n "${NODE_PATH}" ] 			&& echo "	path: \"${NODE_PATH}\","
+				#[ -n "${NODE_ICON16}" ] 		&& echo "	icon16: \"${NODE_ICON16}\","
+				#[ -n "${NODE_ICONSVG}" ] 		&& echo "	iconSvg: \"${NODE_ICONSVG}\","
+				[ -n "${OVERRIDE_TEXT}" ] 		&& echo "	text: _(\"${OVERRIDE_TEXT}\"),"
+				[ -n "${OVERRIDE_POSITION}" ] 	&& echo "	position: ${OVERRIDE_POSITION}"
+				[ -n "${OVERRIDE_PATH}" ] 		&& echo "	newpath: \"${OVERRIDE_PATH}\","
+				[ "${OVERRIDE_DELETE}" != "1" ] && echo "	del: true,"
+				echo "});"
 
-					NODE_FOUND=0
-					break
-				fi
-			done
-			[ "${NODE_FOUND}" == "0" ] && return
-			for PANEL in `cat ${PANEL_CACHE_FILE}`; do
-				eval "${PANEL}"
-				[ "${PANEL_PATH}" == "/" ] && NAME="${PANEL_PATH}${PANEL_ID}" || NAME="${PANEL_PATH}/${PANEL_ID}"
-				if [ "${NODE_NAME}" == "${NAME}" ]; then
-					
-					echo "OMV.WorkspaceManager.registerPanelOverride({"
-					[ -n "${PANEL_ID}" ] && 			echo "	id: \"${PANEL_ID}\","
-					[ -n "${PANEL_PATH}" ] && 			echo "	path: \"${PANEL_PATH}\","
-					[ -n "${OVERRIDE_TEXT}" ] && 		echo "	text: _(\"${OVERRIDE_TEXT}\"),"
-					[ -n "${OVERRIDE_POSITION}" ] && 	echo "	position: ${OVERRIDE_POSITION}"
-					[ -n "${OVERRIDE_CLASS}" ] && 		echo "	className: ${OVERRIDE_CLASS}"
-					[ -n "${OVERRIDE_PATH}" ] && 		echo "	newpath: \"${OVERRIDE_PATH}\","
-					[ "${OVERRIDE_DELETE}" != "1" ] && 	echo "	del: true,"
-					echo "});"
+				NODE_FOUND=0
+				break
+			fi
+		done
+		[ "${NODE_FOUND}" == "0" ] && return
+		for PANEL in `cat ${PANEL_CACHE_FILE}`; do
+			eval "${PANEL}"
+			NAME=$(get_name "${PANEL_PATH}" "${PANEL_ID}")
+			if [ "${NODE_NAME}" == "${NAME}" ]; then
+				
+				echo "OMV.WorkspaceManager.registerPanelOverride({"
+				[ -n "${PANEL_ID}" ] && 			echo "	id: \"${PANEL_ID}\","
+				[ -n "${PANEL_PATH}" ] && 			echo "	path: \"${PANEL_PATH}\","
+				[ -n "${OVERRIDE_TEXT}" ] && 		echo "	text: _(\"${OVERRIDE_TEXT}\"),"
+				[ -n "${OVERRIDE_POSITION}" ] && 	echo "	position: ${OVERRIDE_POSITION}"
+				[ -n "${OVERRIDE_CLASS}" ] && 		echo "	className: ${OVERRIDE_CLASS}"
+				[ -n "${OVERRIDE_PATH}" ] && 		echo "	newpath: \"${OVERRIDE_PATH}\","
+				[ "${OVERRIDE_DELETE}" != "1" ] && 	echo "	del: true,"
+				echo "});"
 
-					NODE_FOUND=0
-					break
-				fi
-			done
-		)
-	#fi
+				NODE_FOUND=0
+				break
+			fi
+		done
+	)
 }
 
 ################################################################################
@@ -296,16 +304,6 @@ fi
 [ -n "${TREE_ROOT}" ] && tree_root "${TREE_ROOT}"
 [ -n "${NODE_INFO}" ] && node_info "${NODE_INFO}"
 [ -n "${OVERRIDE_NODE}" ] && override "${OVERRIDE_NODE}"
-
-################################################################################
-
-#for PANEL in `cat ${PANEL_CACHE_FILE}`; do
-#	eval "${PANEL}"
-#	
-#	[ "${PANEL_PATH}" == "/" ] && NAME="${PANEL_PATH}${PANEL_ID}" || NAME="${PANEL_PATH}/${PANEL_ID}"
-#	[ "${NAME}" == "/privilege/user" ] && echo "${PANEL_POSITION} ${PANEL_TEXT}"
-#	
-#done
 
 ################################################################################
 
