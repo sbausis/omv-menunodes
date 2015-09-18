@@ -11,21 +11,27 @@ ROOTDIR=""
 SUBDIR="admin"
 NODE_INFO=""
 TREE_ROOT=""
+NODE_PATH=""
+NODE_OVERRIDE=""
+NODE_DELETE=1
 CLEAN=1
 LIST=1
 LIST_NODES=1
 LIST_PANELS=1
 
-while getopts ":r:s:i:t:clNP" opt; do
+while getopts ":r:s:i:t:P:O:Dclnp" opt; do
 	case $opt in
 		r) ROOTDIR="$OPTARG" ;;
 		s) SUBDIR="$OPTARG" ;;
 		i) NODE_INFO="$OPTARG" ;;
 		t) TREE_ROOT="$OPTARG" ;;
+		P) NODE_PATH="$OPTARG" ;;
+		O) NODE_OVERRIDE="$OPTARG" ;;
+		D) NODE_DELETE=0 ;;
 		c) CLEAN=0 ;;
 		l) LIST=0 ;;
-		N) LIST_NODES=0 ;;
-		P) LIST_PANELS=0 ;;
+		n) LIST_NODES=0 ;;
+		p) LIST_PANELS=0 ;;
 		\?) echo "Invalid option: -$OPTARG" >&2 && exit 1 ;;
 		:) echo "Option -$OPTARG requires an argument." >&2 && exit 1 ;;
 	esac
@@ -204,6 +210,55 @@ function tree_root() {
 	) | sort
 }
 
+function override() {
+	local NODE_NAME="$1"
+	local NODE_FOUND=1
+	if [ -n "${NODE_PATH}" ] || [ "${NODE_DELETE}" != "1" ]; then
+		(IFS=$'\n'; 
+			for NODE in `cat ${NODE_CACHE_FILE}`; do
+				eval "${NODE}"
+				[ "${NODE_PATH}" == "/" ] && NAME="${NODE_PATH}${NODE_ID}" || NAME="${NODE_PATH}/${NODE_ID}"
+				if [ "${NODE_NAME}" == "${NAME}" ]; then
+
+					echo "OMV.WorkspaceManager.registerNodeOverride({"
+					[ -n "${NODE_PATH}" ] && echo "	newpath: \"${NODE_PATH}\","
+					[ "${NODE_DELETE}" != "1" ] && echo "	del: true,"
+					echo "	id: \"${NODE_ID}\","
+					echo "	path: \"${NODE_PATH}\","
+					[ -n "${NODE_ICON16}" ] && echo "//	icon16: \"${NODE_ICON16}\","
+					[ -n "${NODE_ICON16}" ] && echo "//	iconSvg: \"${NODE_ICONSVG}\","
+					echo "//	text: _(\"${NODE_TEXT}\"),"
+					echo "//	position: ${NODE_POSITION}"
+					echo "});"
+
+					NODE_FOUND=0
+					break
+				fi
+			done
+			[ "${NODE_FOUND}" == "0" ] && return
+			for PANEL in `cat ${PANEL_CACHE_FILE}`; do
+				eval "${PANEL}"
+				[ "${PANEL_PATH}" == "/" ] && NAME="${PANEL_PATH}${PANEL_ID}" || NAME="${PANEL_PATH}/${PANEL_ID}"
+				if [ "${NODE_NAME}" == "${NAME}" ]; then
+
+					echo "OMV.WorkspaceManager.registerPanelOverride({"
+					[ -n "${NODE_PATH}" ] && echo "	newpath: \"${NODE_PATH}\","
+					[ "${NODE_DELETE}" != "1" ] && echo "	del: true,"
+					echo "	id: \"${PANEL_ID}\","
+					echo "	path: \"${PANEL_PATH}\","
+					echo "//	text: _(\"${PANEL_TEXT}\"),"
+					echo "//	position: ${PANEL_POSITION}"
+					echo "	className: ${PANEL_CLASSNAME}"
+					echo "});"
+
+					NODE_FOUND=0
+					break
+				fi
+			done
+		)
+	fi
+}
+
 ################################################################################
 
 [ "${CLEAN}" == "0" ] && clean_cache
@@ -218,6 +273,7 @@ fi
 [ "${LIST_PANELS}" == "0" ] && list_panels
 [ -n "${TREE_ROOT}" ] && tree_root "${TREE_ROOT}"
 [ -n "${NODE_INFO}" ] && node_info "${NODE_INFO}"
+[ -n "${NODE_OVERRIDE}" ] && override "${NODE_OVERRIDE}"
 
 ################################################################################
 
