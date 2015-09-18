@@ -7,31 +7,53 @@
 
 SCRIPTDIR=$(cd `dirname $0` && pwd)
 
+# Folders
 ROOTDIR=""
 SUBDIR="admin"
-NODE_INFO=""
-TREE_ROOT=""
-NODE_PATH=""
-NODE_OVERRIDE=""
-NODE_DELETE=1
+
+# Cache
 CLEAN=1
+
+# Functions
 LIST=1
 LIST_NODES=1
 LIST_PANELS=1
+NODE_INFO=""
+TREE_ROOT=""
 
-while getopts ":r:s:i:t:P:O:Dclnp" opt; do
+# Override
+OVERRIDE_NODE=""
+OVERRIDE_DELETE=1
+OVERRIDE_PATH=""
+OVERRIDE_POSITION=""
+OVERRIDE_CLASS=""
+OVERRIDE_TEXT=""
+
+while getopts ":r:s:clnpi:t:O:DP:N:C:T:" opt; do
 	case $opt in
+		
+		# Folders
 		r) ROOTDIR="$OPTARG" ;;
 		s) SUBDIR="$OPTARG" ;;
-		i) NODE_INFO="$OPTARG" ;;
-		t) TREE_ROOT="$OPTARG" ;;
-		P) NODE_PATH="$OPTARG" ;;
-		O) NODE_OVERRIDE="$OPTARG" ;;
-		D) NODE_DELETE=0 ;;
+		
+		# Cache
 		c) CLEAN=0 ;;
+		
+		# Functions
 		l) LIST=0 ;;
 		n) LIST_NODES=0 ;;
 		p) LIST_PANELS=0 ;;
+		i) NODE_INFO="$OPTARG" ;;
+		t) TREE_ROOT="$OPTARG" ;;
+		
+		# Override
+		O) OVERRIDE_NODE="$OPTARG" ;;
+		D) OVERRIDE_DELETE=0 ;;
+		P) OVERRIDE_PATH="$OPTARG" ;;
+		N) OVERRIDE_POSITION="$OPTARG" ;;
+		C) OVERRIDE_CLASS="$OPTARG" ;;
+		T) OVERRIDE_TEXT="$OPTARG" ;;
+		
 		\?) echo "Invalid option: -$OPTARG" >&2 && exit 1 ;;
 		:) echo "Option -$OPTARG requires an argument." >&2 && exit 1 ;;
 	esac
@@ -213,22 +235,22 @@ function tree_root() {
 function override() {
 	local NODE_NAME="$1"
 	local NODE_FOUND=1
-	if [ -n "${NODE_PATH}" ] || [ "${NODE_DELETE}" != "1" ]; then
+	#if [ -n "${OVERRIDE_PATH}" ] || [ "${OVERRIDE_DELETE}" != "1" ]; then
 		(IFS=$'\n'; 
 			for NODE in `cat ${NODE_CACHE_FILE}`; do
 				eval "${NODE}"
 				[ "${NODE_PATH}" == "/" ] && NAME="${NODE_PATH}${NODE_ID}" || NAME="${NODE_PATH}/${NODE_ID}"
 				if [ "${NODE_NAME}" == "${NAME}" ]; then
-
+					
 					echo "OMV.WorkspaceManager.registerNodeOverride({"
-					[ -n "${NODE_PATH}" ] && echo "	newpath: \"${NODE_PATH}\","
-					[ "${NODE_DELETE}" != "1" ] && echo "	del: true,"
-					echo "	id: \"${NODE_ID}\","
-					echo "	path: \"${NODE_PATH}\","
-					[ -n "${NODE_ICON16}" ] && echo "//	icon16: \"${NODE_ICON16}\","
-					[ -n "${NODE_ICON16}" ] && echo "//	iconSvg: \"${NODE_ICONSVG}\","
-					echo "//	text: _(\"${NODE_TEXT}\"),"
-					echo "//	position: ${NODE_POSITION}"
+					[ -n "${NODE_ID}" ] 			&& echo "	id: \"${NODE_ID}\","
+					[ -n "${NODE_PATH}" ] 			&& echo "	path: \"${NODE_PATH}\","
+					#[ -n "${NODE_ICON16}" ] 		&& echo "	icon16: \"${NODE_ICON16}\","
+					#[ -n "${NODE_ICONSVG}" ] 		&& echo "	iconSvg: \"${NODE_ICONSVG}\","
+					[ -n "${OVERRIDE_TEXT}" ] 		&& echo "	text: _(\"${OVERRIDE_TEXT}\"),"
+					[ -n "${OVERRIDE_POSITION}" ] 	&& echo "	position: ${OVERRIDE_POSITION}"
+					[ -n "${OVERRIDE_PATH}" ] 		&& echo "	newpath: \"${OVERRIDE_PATH}\","
+					[ "${OVERRIDE_DELETE}" != "1" ] && echo "	del: true,"
 					echo "});"
 
 					NODE_FOUND=0
@@ -240,15 +262,15 @@ function override() {
 				eval "${PANEL}"
 				[ "${PANEL_PATH}" == "/" ] && NAME="${PANEL_PATH}${PANEL_ID}" || NAME="${PANEL_PATH}/${PANEL_ID}"
 				if [ "${NODE_NAME}" == "${NAME}" ]; then
-
+					
 					echo "OMV.WorkspaceManager.registerPanelOverride({"
-					[ -n "${NODE_PATH}" ] && echo "	newpath: \"${NODE_PATH}\","
-					[ "${NODE_DELETE}" != "1" ] && echo "	del: true,"
-					echo "	id: \"${PANEL_ID}\","
-					echo "	path: \"${PANEL_PATH}\","
-					echo "//	text: _(\"${PANEL_TEXT}\"),"
-					echo "//	position: ${PANEL_POSITION}"
-					echo "	className: ${PANEL_CLASSNAME}"
+					[ -n "${PANEL_ID}" ] && 			echo "	id: \"${PANEL_ID}\","
+					[ -n "${PANEL_PATH}" ] && 			echo "	path: \"${PANEL_PATH}\","
+					[ -n "${OVERRIDE_TEXT}" ] && 		echo "	text: _(\"${OVERRIDE_TEXT}\"),"
+					[ -n "${OVERRIDE_POSITION}" ] && 	echo "	position: ${OVERRIDE_POSITION}"
+					[ -n "${OVERRIDE_CLASS}" ] && 		echo "	className: ${OVERRIDE_CLASS}"
+					[ -n "${OVERRIDE_PATH}" ] && 		echo "	newpath: \"${OVERRIDE_PATH}\","
+					[ "${OVERRIDE_DELETE}" != "1" ] && 	echo "	del: true,"
 					echo "});"
 
 					NODE_FOUND=0
@@ -256,7 +278,7 @@ function override() {
 				fi
 			done
 		)
-	fi
+	#fi
 }
 
 ################################################################################
@@ -273,7 +295,7 @@ fi
 [ "${LIST_PANELS}" == "0" ] && list_panels
 [ -n "${TREE_ROOT}" ] && tree_root "${TREE_ROOT}"
 [ -n "${NODE_INFO}" ] && node_info "${NODE_INFO}"
-[ -n "${NODE_OVERRIDE}" ] && override "${NODE_OVERRIDE}"
+[ -n "${OVERRIDE_NODE}" ] && override "${OVERRIDE_NODE}"
 
 ################################################################################
 
