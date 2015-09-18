@@ -64,7 +64,7 @@ done
 MODULEDIR="${ROOTDIR}/var/www/openmediavault/js/omv/module/${SUBDIR}"
 [ -d "${MODULEDIR}" ] || exit 1
 
-CACHEDIR="/tmp"
+CACHEDIR="/var/cache/openmediavault"
 NODE_CACHE_FILE="${CACHEDIR}/cached_${SUBDIR}_nodes.list"
 PANEL_CACHE_FILE="${CACHEDIR}/cached_${SUBDIR}_panels.list"
 
