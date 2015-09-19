@@ -125,7 +125,7 @@ function generate_cache() {
 			[ "${NODE_ICON16}" == "${NODE_VALUES}" ] && NODE_ICON16=""
 			[ "${NODE_ICONSVG}" == "${NODE_VALUES}" ] && NODE_ICONSVG=""
 			[ "${NODE_TEXT}" == "${NODE_VALUES}" ] && NODE_TEXT=""
-			[ "${NODE_POSITION}" == "${NODE_VALUES}" ] && NODE_POSITION=""
+			[ "${NODE_POSITION}" == "${NODE_VALUES}" ] && NODE_POSITION="50"
 			
 			echo "FILE=\"${FILENAME}\";NODES_CNT=\"${NODES_CNT}\";NODE_ID=\"${NODE_ID}\";NODE_PATH=\"${NODE_PATH}\";NODE_ICON16=\"${NODE_ICON16}\";NODE_ICONSVG=\"${NODE_ICONSVG}\";NODE_TEXT=\"${NODE_TEXT}\";NODE_POSITION=\"${NODE_POSITION}\";" >> ${NODE_CACHE_FILE}
 
@@ -147,7 +147,7 @@ function generate_cache() {
 			[ "${PANEL_ID}" == "${PANEL_VALUES}" ] && PANEL_ID=""
 			[ "${PANEL_PATH}" == "${PANEL_VALUES}" ] && PANEL_PATH=""
 			[ "${PANEL_TEXT}" == "${PANEL_VALUES}" ] && PANEL_TEXT=""
-			[ "${PANEL_POSITION}" == "${PANEL_VALUES}" ] && PANEL_POSITION=""
+			[ "${PANEL_POSITION}" == "${PANEL_VALUES}" ] && PANEL_POSITION="50"
 			[ "${PANEL_CLASSNAME}" == "${PANEL_VALUES}" ] && PANEL_CLASSNAME=""
 			
 			echo "FILE=\"${FILENAME}\";PANELS_CNT=\"${PANELS_CNT}\";PANEL_ID=\"${PANEL_ID}\";PANEL_PATH=\"${PANEL_PATH}\";PANEL_TEXT=\"${PANEL_TEXT}\";PANEL_POSITION=\"${PANEL_POSITION}\";PANEL_CLASSNAME=\"${PANEL_CLASSNAME}\";" >> ${PANEL_CACHE_FILE}
@@ -186,6 +186,7 @@ function list_all() {
 		else
 			echo "${NAME}"
 		fi
+		NODECNT=$(expr ${NODECNT} + 1)
 		for PANEL in `cat ${PANEL_CACHE_FILE}`; do
 			eval "${PANEL}"
 			if [ "${NAME}" == "${PANEL_PATH}" ]; then
@@ -202,7 +203,6 @@ function list_all() {
 				break
 			fi
 		done
-		NODECNT=$(expr ${NODECNT} + 1)
 	done)
 	
 	
