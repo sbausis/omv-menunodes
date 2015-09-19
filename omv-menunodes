@@ -10,6 +10,7 @@ SCRIPTDIR=$(cd `dirname $0` && pwd)
 # Folders
 ROOTDIR=""
 SUBDIR="admin"
+CACHEDIR="/var/cache/openmediavault"
 
 # Cache
 CLEAN=1
@@ -29,12 +30,13 @@ OVERRIDE_POSITION=""
 OVERRIDE_CLASS=""
 OVERRIDE_TEXT=""
 
-while getopts ":r:s:clnpi:t:O:DP:N:C:T:" opt; do
+while getopts ":r:s:o:clnpi:t:O:DP:N:C:T:" opt; do
 	case $opt in
 		
 		# Folders
 		r) ROOTDIR="$OPTARG" ;;
 		s) SUBDIR="$OPTARG" ;;
+		o) CACHEDIR="$OPTARG" ;;
 		
 		# Cache
 		c) CLEAN=0 ;;
@@ -64,9 +66,11 @@ done
 MODULEDIR="${ROOTDIR}/var/www/openmediavault/js/omv/module/${SUBDIR}"
 [ -d "${MODULEDIR}" ] || exit 1
 
-CACHEDIR="/var/cache/openmediavault"
+#CACHEDIR="/var/cache/openmediavault"
 NODE_CACHE_FILE="${CACHEDIR}/cached_${SUBDIR}_nodes.list"
 PANEL_CACHE_FILE="${CACHEDIR}/cached_${SUBDIR}_panels.list"
+
+[ -d "${CACHEDIR}" ] || mkdir -p "${CACHEDIR}"
 
 ################################################################################
 
