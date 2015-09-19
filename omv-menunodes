@@ -67,7 +67,7 @@ while getopts ":r:s:o:cjlnpi:t:O:DP:N:C:T:" opt; do
 	esac
 done
 
-[ -n "$ROOTDIR" ] || exit 1
+#[ -n "$ROOTDIR" ] || exit 1
 
 MODULEDIR="${ROOTDIR}/var/www/openmediavault/js/omv/module/${SUBDIR}"
 [ -d "${MODULEDIR}" ] || exit 1
