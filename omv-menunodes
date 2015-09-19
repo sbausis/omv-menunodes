@@ -15,6 +15,9 @@ CACHEDIR="/var/cache/openmediavault"
 # Cache
 CLEAN=1
 
+# Mode
+MODE_JSON=1
+
 # Functions
 LIST=1
 LIST_NODES=1
@@ -30,7 +33,7 @@ OVERRIDE_POSITION=""
 OVERRIDE_CLASS=""
 OVERRIDE_TEXT=""
 
-while getopts ":r:s:o:clnpi:t:O:DP:N:C:T:" opt; do
+while getopts ":r:s:o:cjlnpi:t:O:DP:N:C:T:" opt; do
 	case $opt in
 		
 		# Folders
@@ -40,6 +43,9 @@ while getopts ":r:s:o:clnpi:t:O:DP:N:C:T:" opt; do
 		
 		# Cache
 		c) CLEAN=0 ;;
+		
+		# Mode
+		j) MODE_JSON=0 ;;
 		
 		# Functions
 		l) LIST=0 ;;
@@ -164,47 +170,128 @@ function get_name() {
 }
 
 function list_all() {
-	(IFS=$'\n'; for NODE in `cat ${NODE_CACHE_FILE}`; do
+	if [ "${MODE_JSON}" != "1" ]; then
+		printf "[ "
+	fi
+	RET=$(IFS=$'\n'; 
+	NODECNT=0
+	for NODE in `cat ${NODE_CACHE_FILE}`; do
 		eval "${NODE}"
 		NAME=$(get_name "${NODE_PATH}" "${NODE_ID}")
-		echo "${NAME}"
+		if [ "${MODE_JSON}" != "1" ]; then
+			if [ ${NODECNT} -gt 0 ]; then
+				printf ", "
+			fi
+			printf "{ \"type\":0, \"id\":\"${NODE_ID}\", \"path\":\"${NODE_PATH}\", \"text\":\"${NODE_TEXT}\", \"position\":${NODE_POSITION}, \"icon16\":\"${NODE_ICON16}\", \"iconSvg\":\"${NODE_ICONSVG}\" }"
+		else
+			echo "${NAME}"
+		fi
 		for PANEL in `cat ${PANEL_CACHE_FILE}`; do
 			eval "${PANEL}"
-			[ "${NAME}" == "${PANEL_PATH}" ] && echo "${PANEL_PATH}/${PANEL_ID}" && break
+			if [ "${NAME}" == "${PANEL_PATH}" ]; then
+				if [ "${MODE_JSON}" != "1" ]; then
+					if [ ${NODECNT} -gt 0 ]; then
+						printf ", "
+					fi
+					printf "{ \"type\":1, \"id\":\"${PANEL_ID}\", \"path\":\"${PANEL_PATH}\", \"text\":\"${PANEL_TEXT}\", \"position\":${PANEL_POSITION}, \"className\":\"${PANEL_CLASSNAME}\" }"
+				else
+					echo "${PANEL_PATH}/${PANEL_ID}"
+				fi
+				
+				NODECNT=$(expr ${NODECNT} + 1)
+				break
+			fi
 		done
-	done) | sort
+		NODECNT=$(expr ${NODECNT} + 1)
+	done)
+	
+	
+	if [ "${MODE_JSON}" != "1" ]; then
+		printf "${RET}"
+		printf " ]"
+	else
+		echo "${RET}" | sort
+	fi
 }
 
 function list_nodes() {
-	(IFS=$'\n'; for NODE in `cat ${NODE_CACHE_FILE}`; do
+	if [ "${MODE_JSON}" != "1" ]; then
+		printf "[ "
+	fi
+	RET=$(IFS=$'\n'; 
+	NODECNT=0
+	for NODE in `cat ${NODE_CACHE_FILE}`; do
 		eval "${NODE}"
-		NAME=$(get_name "${NODE_PATH}" "${NODE_ID}")
-		echo "${NAME}"
-	done) | sort
+		if [ "${MODE_JSON}" != "1" ]; then
+			if [ ${NODECNT} -gt 0 ]; then
+				printf ", "
+			fi
+			printf "{ \"id\":\"${NODE_ID}\", \"path\":\"${NODE_PATH}\", \"text\":\"${NODE_TEXT}\", \"position\":${NODE_POSITION}, \"icon16\":\"${NODE_ICON16}\", \"iconSvg\":\"${NODE_ICONSVG}\" }"
+		else
+			NAME=$(get_name "${NODE_PATH}" "${NODE_ID}")
+			echo "${NAME}"
+		fi
+		NODECNT=$(expr ${NODECNT} + 1)
+	done)
+	
+	if [ "${MODE_JSON}" != "1" ]; then
+		printf "${RET}"
+		printf " ]"
+	else
+		echo "${RET}" | sort
+	fi
 }
 
 function list_panels() {
-	(IFS=$'\n'; for PANEL in `cat ${PANEL_CACHE_FILE}`; do
+	if [ "${MODE_JSON}" != "1" ]; then
+		printf "[ "
+	fi
+	RET=$(IFS=$'\n'; 
+	NODECNT=0
+	for PANEL in `cat ${PANEL_CACHE_FILE}`; do
 		eval "${PANEL}"
-		NAME=$(get_name "${PANEL_PATH}" "${PANEL_ID}")
-		echo "${NAME}"
-	done) | sort
+		if [ "${MODE_JSON}" != "1" ]; then
+			if [ ${NODECNT} -gt 0 ]; then
+				printf ", "
+			fi
+			printf "{ \"id\":\"${PANEL_ID}\", \"path\":\"${PANEL_PATH}\", \"text\":\"${PANEL_TEXT}\", \"position\":${PANEL_POSITION}, \"className\":\"${PANEL_CLASSNAME}\" }"
+		else
+			NAME=$(get_name "${PANEL_PATH}" "${PANEL_ID}")
+			echo "${NAME}"
+			#echo "${PANEL_PATH}/${PANEL_ID}"
+		fi
+		NODECNT=$(expr ${NODECNT} + 1)
+	done)
+	
+	if [ "${MODE_JSON}" != "1" ]; then
+		printf "${RET}"
+		printf " ]"
+	else
+		echo "${RET}" | sort
+	fi
 }
 
 function node_info() {
 	local NODE_NAME="$1"
 	local NODE_FOUND=1
+	if [ "${MODE_JSON}" != "1" ]; then
+		printf "[ "
+	fi
 	(IFS=$'\n'; 
 		for NODE in `cat ${NODE_CACHE_FILE}`; do
 			eval "${NODE}"
 			NAME=$(get_name "${NODE_PATH}" "${NODE_ID}")
 			if [ "${NODE_NAME}" == "${NAME}" ]; then
-				echo "NODE_ID=${NODE_ID}"
-				echo "NODE_PATH=${NODE_PATH}"
-				echo "NODE_ICON16=${NODE_ICON16}"
-				echo "NODE_ICONSVG=${NODE_ICONSVG}"
-				echo "NODE_TEXT=${NODE_TEXT}"
-				echo "NODE_POSITION=${NODE_POSITION}"
+				if [ "${MODE_JSON}" != "1" ]; then
+					printf "{ \"id\":\"${NODE_ID}\", \"path\":\"${NODE_PATH}\", \"text\":\"${NODE_TEXT}\", \"position\":${NODE_POSITION}, \"icon16\":\"${NODE_ICON16}\", \"iconSvg\":\"${NODE_ICONSVG}\" }"
+				else
+					echo "NODE_ID=${NODE_ID}"
+					echo "NODE_PATH=${NODE_PATH}"
+					echo "NODE_ICON16=${NODE_ICON16}"
+					echo "NODE_ICONSVG=${NODE_ICONSVG}"
+					echo "NODE_TEXT=${NODE_TEXT}"
+					echo "NODE_POSITION=${NODE_POSITION}"
+				fi
 				NODE_FOUND=0
 				break
 			fi
@@ -214,36 +301,72 @@ function node_info() {
 			eval "${PANEL}"
 			NAME=$(get_name "${PANEL_PATH}" "${PANEL_ID}")
 			if [ "${NODE_NAME}" == "${NAME}" ]; then
-				echo "PANEL_ID=${PANEL_ID}"
-				echo "PANEL_PATH=${PANEL_PATH}"
-				echo "PANEL_TEXT=${PANEL_TEXT}"
-				echo "PANEL_POSITION=${PANEL_POSITION}"
-				echo "PANEL_CLASSNAME=${PANEL_CLASSNAME}"
+				if [ "${MODE_JSON}" != "1" ]; then
+					printf "{ \"id\":\"${PANEL_ID}\", \"path\":\"${PANEL_PATH}\", \"text\":\"${PANEL_TEXT}\", \"position\":${PANEL_POSITION}, \"className\":\"${PANEL_CLASSNAME}\" }"
+				else
+					echo "PANEL_ID=${PANEL_ID}"
+					echo "PANEL_PATH=${PANEL_PATH}"
+					echo "PANEL_TEXT=${PANEL_TEXT}"
+					echo "PANEL_POSITION=${PANEL_POSITION}"
+					echo "PANEL_CLASSNAME=${PANEL_CLASSNAME}"
+				fi
 				NODE_FOUND=0
 				break
 			fi
 		done
 	)
+	if [ "${MODE_JSON}" != "1" ]; then
+		printf " ]"
+	fi
 }
 
 function tree_root() {
 	local NODE_NAME="$1"
-	(IFS=$'\n'; 
-			for NODE in `cat ${NODE_CACHE_FILE}`; do
+	
+	if [ "${MODE_JSON}" != "1" ]; then
+		printf "[ "
+	fi
+	RET=$(IFS=$'\n'; 
+		NODECNT=0
+		for NODE in `cat ${NODE_CACHE_FILE}`; do
 			eval "${NODE}"
 			NAME=$(get_name "${NODE_PATH}" "${NODE_ID}")
 			if [ "${NAME}" != "${NAME#${NODE_NAME}}" ]; then
-				echo "${NAME}"
+				if [ "${MODE_JSON}" != "1" ]; then
+					if [ ${NODECNT} -gt 0 ]; then
+						printf ", "
+					fi
+					printf "{ \"id\":\"${NODE_ID}\", \"path\":\"${NODE_PATH}\", \"text\":\"${NODE_TEXT}\", \"position\":${NODE_POSITION}, \"icon16\":\"${NODE_ICON16}\", \"iconSvg\":\"${NODE_ICONSVG}\" }"
+				else
+					echo "${NAME}"
+				fi
+				NODECNT=$(expr ${NODECNT} + 1)
 			fi
 		done
 		for PANEL in `cat ${PANEL_CACHE_FILE}`; do
 			eval "${PANEL}"
 			NAME=$(get_name "${PANEL_PATH}" "${PANEL_ID}")
 			if [ "${NAME}" != "${NAME#${NODE_NAME}}" ]; then
-				echo "${NAME}"
+				if [ "${MODE_JSON}" != "1" ]; then
+					if [ ${NODECNT} -gt 0 ]; then
+						printf ", "
+					fi
+					printf "{ \"id\":\"${PANEL_ID}\", \"path\":\"${PANEL_PATH}\", \"text\":\"${PANEL_TEXT}\", \"position\":${PANEL_POSITION}, \"className\":\"${PANEL_CLASSNAME}\" }"
+				else
+					echo "${NAME}"
+				fi
+				NODECNT=$(expr ${NODECNT} + 1)
 			fi
 		done
-	) | sort
+	)
+	
+	if [ "${MODE_JSON}" != "1" ]; then
+		printf "${RET}"
+		printf " ]"
+	else
+		echo "${RET}" | sort
+	fi
+	
 }
 
 function override() {
