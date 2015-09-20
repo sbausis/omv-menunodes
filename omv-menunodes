@@ -85,14 +85,14 @@ PANEL_PAT='/OMV.WorkspaceManager.registerPanel\({/,/}\);/'
 
 VALUES_PAT='s/.*({[[:space:]]*\(.*\)[[:space:]]*});*/\1/'
 
-ID_PAT='s/.*id: "*\([0-9a-zA-Z/_]*\)"*,*.*/\1/'
-PATH_PAT='s/.*path: "*\([0-9a-zA-Z/_]*\)"*,*.*/\1/'
-ICON16_PAT='s/.*icon16: "*\([0-9a-zA-Z/_\-\.]*\)"*,*.*/\1/'
-ICONSVG_PAT='s/.*iconSvg: "*\([0-9a-zA-Z/_\-\.]*\)"*,*.*/\1/'
-TEXT_PAT='s/.*text: _("*\([0-9a-zA-Z ]*\)"*),*.*/\1/'
-TEXT_PAT='s/.*text: _("\(.*\)"),*.*/\1/'
-POSITION_PAT='s/.*position: "*\([0-9]*\)"*,*.*/\1/'
-CLASSNAME_PAT='s/.*className: "*\([0-9a-zA-Z\.]*\)"*,*.*/\1/'
+ID_PAT='s/.*id *: *"*\([0-9a-zA-Z/_]*\)"*,*.*/\1/'
+PATH_PAT='s/.*path *: *"*\([0-9a-zA-Z/_]*\)"*,*.*/\1/'
+ICON16_PAT='s/.*icon16 *: *"*\([0-9a-zA-Z/_\-\.]*\)"*,*.*/\1/'
+ICONSVG_PAT='s/.*iconSvg *: *"*\([0-9a-zA-Z/_\-\.]*\)"*,*.*/\1/'
+TEXT_PAT='s/.*text *: *_("*\([0-9a-zA-Z ]*\)"*),*.*/\1/'
+TEXT_PAT='s/.*text *: *_("\(.*\)"),*.*/\1/'
+POSITION_PAT='s/.*position *: *"*\([0-9]*\)"*,*.*/\1/'
+CLASSNAME_PAT='s/.*className *: *"*\([0-9a-zA-Z\.]*\)"*,*.*/\1/'
 
 ################################################################################
 
