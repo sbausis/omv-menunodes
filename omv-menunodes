@@ -187,22 +187,23 @@ function list_all() {
 			echo "${NAME}"
 		fi
 		NODECNT=$(expr ${NODECNT} + 1)
-		for PANEL in `cat ${PANEL_CACHE_FILE}`; do
-			eval "${PANEL}"
-			if [ "${NAME}" == "${PANEL_PATH}" ]; then
-				if [ "${MODE_JSON}" != "1" ]; then
-					if [ ${NODECNT} -gt 0 ]; then
-						printf ", "
-					fi
-					printf "{ \"type\":1, \"id\":\"${PANEL_ID}\", \"path\":\"${PANEL_PATH}\", \"text\":\"${PANEL_TEXT}\", \"position\":${PANEL_POSITION}, \"className\":\"${PANEL_CLASSNAME}\" }"
-				else
-					echo "${PANEL_PATH}/${PANEL_ID}"
+		
+	done
+	for PANEL in `cat ${PANEL_CACHE_FILE}`; do
+		eval "${PANEL}"
+		#if [ "${NAME}" == "${PANEL_PATH}" ]; then
+			if [ "${MODE_JSON}" != "1" ]; then
+				if [ ${NODECNT} -gt 0 ]; then
+					printf ", "
 				fi
-				
-				NODECNT=$(expr ${NODECNT} + 1)
-				break
+				printf "{ \"type\":1, \"id\":\"${PANEL_ID}\", \"path\":\"${PANEL_PATH}\", \"text\":\"${PANEL_TEXT}\", \"position\":${PANEL_POSITION}, \"className\":\"${PANEL_CLASSNAME}\" }"
+			else
+				echo "${PANEL_PATH}/${PANEL_ID}"
 			fi
-		done
+			
+			NODECNT=$(expr ${NODECNT} + 1)
+			#break
+		#fi
 	done)
 	
 	
@@ -426,6 +427,7 @@ if [ ! -f "${NODE_CACHE_FILE}" ] || [ ! -f "${PANEL_CACHE_FILE}" ]; then
 fi
 
 [ "${LIST}" == "0" ] && list_all
+#[ "${LIST}" == "0" ] && list_nodes && list_panels
 [ "${LIST_NODES}" == "0" ] && list_nodes
 [ "${LIST_PANELS}" == "0" ] && list_panels
 [ -n "${TREE_ROOT}" ] && tree_root "${TREE_ROOT}"
