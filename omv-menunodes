@@ -424,10 +424,13 @@ function override() {
 if [ ! -f "${NODE_CACHE_FILE}" ] || [ ! -f "${PANEL_CACHE_FILE}" ]; then
 	clean_cache
 	generate_cache
+	[ -d "${ROOTDIR}/var/www/openmediavault/js/omv/module_override/${SUBDIR}" ] && MODULEDIR="${ROOTDIR}/var/www/openmediavault/js/omv/module_override/${SUBDIR}" && generate_cache
+	MODULEDIR="${ROOTDIR}/var/www/openmediavault/js/omv/module/${SUBDIR}"
 fi
 
 [ "${LIST}" == "0" ] && list_all
-#[ "${LIST}" == "0" ] && list_nodes && list_panels
+#[ "${LIST}" == "0" ] && [ -d "${ROOTDIR}/var/www/openmediavault/js/omv/module_override/${SUBDIR}" ] && MODULEDIR="${ROOTDIR}/var/www/openmediavault/js/omv/module_override/${SUBDIR}" && list_all && exit 0
+
 [ "${LIST_NODES}" == "0" ] && list_nodes
 [ "${LIST_PANELS}" == "0" ] && list_panels
 [ -n "${TREE_ROOT}" ] && tree_root "${TREE_ROOT}"
