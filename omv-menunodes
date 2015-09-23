@@ -78,6 +78,10 @@ PANEL_CACHE_FILE="${CACHEDIR}/cached_${SUBDIR}_panels.list"
 
 [ -d "${CACHEDIR}" ] || mkdir -p "${CACHEDIR}"
 
+OVERRIDEDIR="${ROOTDIR}/var/www/openmediavault/js/omv/module_override/${SUBDIR}"
+NODE_OVERRIDE_FILE="${CACHEDIR}/cached_${SUBDIR}_override_nodes.list"
+PANEL_OVERRIDE_FILE="${CACHEDIR}/cached_${SUBDIR}_override_panels.list"
+
 ################################################################################
 
 NODE_PAT='/OMV.WorkspaceManager.registerNode\({/,/}\);/'
@@ -94,10 +98,20 @@ TEXT_PAT='s/.*text *: *_("\(.*\)"),*.*/\1/'
 POSITION_PAT='s/.*position *: *"*\([0-9]*\)"*,*.*/\1/'
 CLASSNAME_PAT='s/.*className *: *"*\([0-9a-zA-Z\.]*\)"*,*.*/\1/'
 
+NODE_OVERRIDE_PAT='/OMV.WorkspaceManager.registerNodeOverride\({/,/}\);/'
+PANEL_OVERRIDE_PAT='/OMV.WorkspaceManager.registerPanelOverride\({/,/}\);/'
+
+NEWPATH_PAT='s/.*newpath *: *"*\([0-9a-zA-Z/_]*\)"*,*.*/\1/'
+DEL_PAT='s/.*del *: *\([0-9a-zA-Z/_]*\),*.*/\1/'
+
 ################################################################################
 
 function clean_cache() {
 	rm -f "${NODE_CACHE_FILE}" "${PANEL_CACHE_FILE}"
+}
+
+function clean_override_cache() {
+	rm -f "${NODE_OVERRIDE_FILE}" "${PANEL_OVERRIDE_FILE}"
 }
 
 function generate_cache() {
@@ -151,6 +165,77 @@ function generate_cache() {
 			[ "${PANEL_CLASSNAME}" == "${PANEL_VALUES}" ] && PANEL_CLASSNAME=""
 			
 			echo "FILE=\"${FILENAME}\";PANELS_CNT=\"${PANELS_CNT}\";PANEL_ID=\"${PANEL_ID}\";PANEL_PATH=\"${PANEL_PATH}\";PANEL_TEXT=\"${PANEL_TEXT}\";PANEL_POSITION=\"${PANEL_POSITION}\";PANEL_CLASSNAME=\"${PANEL_CLASSNAME}\";" >> ${PANEL_CACHE_FILE}
+
+			PANELS_CNT=$(expr ${PANELS_CNT} - 1)
+		done
+
+		#echo ""
+	done
+}
+
+function generate_override_cache() {
+	FILES=$(find ${MODULEDIR} -type f -name "*.js")
+	for FILE in ${FILES}; do
+
+		#echo "FILE = ${FILE}"
+		FILENAME="${FILE#/${ROOTDIR}}"
+
+		NODES=$(cat "${FILE}" | awk "${NODE_OVERRIDE_PAT}" | tr '\n' ' ')
+		NODES_CNT=`expr $(echo "${NODES}" | awk -F";" '{print NF}') - 1`
+		while [ ${NODES_CNT} -gt 0 ]; do
+
+			NODE=$(echo "${NODES}" | awk -F";" "{print \$${NODES_CNT}}")
+			NODE_VALUES=$(echo "${NODE}" | sed -e "${VALUES_PAT}")
+			NODE_ID=$(echo "${NODE_VALUES}" | sed "${ID_PAT}")
+			NODE_PATH=$(echo "${NODE_VALUES}" | sed "${PATH_PAT}")
+			NODE_ICON16=$(echo "${NODE_VALUES}" | sed "${ICON16_PAT}")
+			NODE_ICONSVG=$(echo "${NODE_VALUES}" | sed "${ICONSVG_PAT}")
+			NODE_TEXT=$(echo "${NODE_VALUES}" | sed "${TEXT_PAT}")
+			NODE_POSITION=$(echo "${NODE_VALUES}" | sed "${POSITION_PAT}")
+			
+			NODE_NEWPATH=$(echo "${NODE_VALUES}" | sed "${NEWPATH_PAT}")
+			NODE_DEL=$(echo "${NODE_VALUES}" | sed "${DEL_PAT}")
+
+			[ "${NODE_ID}" == "${NODE_VALUES}" ] && NODE_ID=""
+			[ "${NODE_PATH}" == "${NODE_VALUES}" ] && NODE_PATH=""
+			[ "${NODE_ICON16}" == "${NODE_VALUES}" ] && NODE_ICON16=""
+			[ "${NODE_ICONSVG}" == "${NODE_VALUES}" ] && NODE_ICONSVG=""
+			[ "${NODE_TEXT}" == "${NODE_VALUES}" ] && NODE_TEXT=""
+			[ "${NODE_POSITION}" == "${NODE_VALUES}" ] && NODE_POSITION="50"
+			
+			[ "${NODE_NEWPATH}" == "${NODE_VALUES}" ] && NODE_NEWPATH=""
+			[ "${NODE_DEL}" == "${NODE_VALUES}" ] && NODE_DEL="false"
+			
+			echo "FILE=\"${FILENAME}\";NODES_CNT=\"${NODES_CNT}\";NODE_ID=\"${NODE_ID}\";NODE_PATH=\"${NODE_PATH}\";NODE_ICON16=\"${NODE_ICON16}\";NODE_ICONSVG=\"${NODE_ICONSVG}\";NODE_TEXT=\"${NODE_TEXT}\";NODE_POSITION=\"${NODE_POSITION}\";NODE_NEWPATH=\"${NODE_NEWPATH}\";NODE_DEL=\"${NODE_DEL}\";" >> ${NODE_OVERRIDE_FILE}
+
+			NODES_CNT=$(expr ${NODES_CNT} - 1)
+		done
+
+		PANELS=$(cat "${FILE}" | awk "${PANEL_OVERRIDE_PAT}" | tr '\n' ' ')
+		PANELS_CNT=`expr $(echo "${PANELS}" | awk -F";" '{print NF}') - 1`
+		while [ ${PANELS_CNT} -gt 0 ]; do
+
+			PANEL=$(echo "${PANELS}" | awk -F";" "{print \$${PANELS_CNT}}")
+			PANEL_VALUES=$(echo "${PANEL}" | sed -e "${VALUES_PAT}")
+			PANEL_ID=$(echo "${PANEL_VALUES}" | sed "${ID_PAT}")
+			PANEL_PATH=$(echo "${PANEL_VALUES}" | sed "${PATH_PAT}")
+			PANEL_TEXT=$(echo "${PANEL_VALUES}" | sed "${TEXT_PAT}")
+			PANEL_POSITION=$(echo "${PANEL_VALUES}" | sed "${POSITION_PAT}")
+			PANEL_CLASSNAME=$(echo "${PANEL_VALUES}" | sed "${CLASSNAME_PAT}")
+			
+			PANEL_NEWPATH=$(echo "${PANEL_VALUES}" | sed "${NEWPATH_PAT}")
+			PANEL_DEL=$(echo "${PANEL_VALUES}" | sed "${DEL_PAT}")
+
+			[ "${PANEL_ID}" == "${PANEL_VALUES}" ] && PANEL_ID=""
+			[ "${PANEL_PATH}" == "${PANEL_VALUES}" ] && PANEL_PATH=""
+			[ "${PANEL_TEXT}" == "${PANEL_VALUES}" ] && PANEL_TEXT=""
+			[ "${PANEL_POSITION}" == "${PANEL_VALUES}" ] && PANEL_POSITION="50"
+			[ "${PANEL_CLASSNAME}" == "${PANEL_VALUES}" ] && PANEL_CLASSNAME=""
+			
+			[ "${PANEL_NEWPATH}" == "${NODE_VALUES}" ] && PANEL_NEWPATH=""
+			[ "${PANEL_DEL}" == "${NODE_VALUES}" ] && PANEL_DEL="false"
+			
+			echo "FILE=\"${FILENAME}\";PANELS_CNT=\"${PANELS_CNT}\";PANEL_ID=\"${PANEL_ID}\";PANEL_PATH=\"${PANEL_PATH}\";PANEL_TEXT=\"${PANEL_TEXT}\";PANEL_POSITION=\"${PANEL_POSITION}\";PANEL_CLASSNAME=\"${PANEL_CLASSNAME}\";PANEL_NEWPATH=\"${PANEL_NEWPATH}\";PANEL_DEL=\"${PANEL_DEL}\";" >> ${PANEL_OVERRIDE_FILE}
 
 			PANELS_CNT=$(expr ${PANELS_CNT} - 1)
 		done
@@ -420,17 +505,26 @@ function override() {
 ################################################################################
 
 [ "${CLEAN}" == "0" ] && clean_cache
+[ "${CLEAN}" == "0" ] && clean_override_cache
 
 if [ ! -f "${NODE_CACHE_FILE}" ] || [ ! -f "${PANEL_CACHE_FILE}" ]; then
 	clean_cache
 	generate_cache
-	[ -d "${ROOTDIR}/var/www/openmediavault/js/omv/module_override/${SUBDIR}" ] && MODULEDIR="${ROOTDIR}/var/www/openmediavault/js/omv/module_override/${SUBDIR}" && generate_cache
-	MODULEDIR="${ROOTDIR}/var/www/openmediavault/js/omv/module/${SUBDIR}"
+	OLDMODULEDIR="${MODULEDIR}"
+	[ -d "${OVERRIDEDIR}" ] && MODULEDIR="${OVERRIDEDIR}" && generate_cache
+	MODULEDIR="${OLDMODULEDIR}"
+	
+fi
+
+if [ ! -f "${NODE_OVERRIDE_FILE}" ] || [ ! -f "${PANEL_OVERRIDE_FILE}" ]; then
+	clean_override_cache
+	#generate_override_cache
+	OLDMODULEDIR="${MODULEDIR}"
+	[ -d "${OVERRIDEDIR}" ] && MODULEDIR="${OVERRIDEDIR}" && generate_override_cache
+	MODULEDIR="${OLDMODULEDIR}"
 fi
 
 [ "${LIST}" == "0" ] && list_all
-#[ "${LIST}" == "0" ] && [ -d "${ROOTDIR}/var/www/openmediavault/js/omv/module_override/${SUBDIR}" ] && MODULEDIR="${ROOTDIR}/var/www/openmediavault/js/omv/module_override/${SUBDIR}" && list_all && exit 0
-
 [ "${LIST_NODES}" == "0" ] && list_nodes
 [ "${LIST_PANELS}" == "0" ] && list_panels
 [ -n "${TREE_ROOT}" ] && tree_root "${TREE_ROOT}"
