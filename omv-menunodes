@@ -20,6 +20,7 @@ MODE_JSON=1
 
 # Functions
 LIST=1
+LIST_OVERRIDES=1
 LIST_NODES=1
 LIST_PANELS=1
 NODE_INFO=""
@@ -33,7 +34,7 @@ OVERRIDE_POSITION=""
 OVERRIDE_CLASS=""
 OVERRIDE_TEXT=""
 
-while getopts ":r:s:o:cjlnpi:t:O:DP:N:C:T:" opt; do
+while getopts ":r:s:o:cjlLnpi:t:O:DP:N:C:T:" opt; do
 	case $opt in
 		
 		# Folders
@@ -49,6 +50,7 @@ while getopts ":r:s:o:cjlnpi:t:O:DP:N:C:T:" opt; do
 		
 		# Functions
 		l) LIST=0 ;;
+		L) LIST_OVERRIDES=0 ;;
 		n) LIST_NODES=0 ;;
 		p) LIST_PANELS=0 ;;
 		i) NODE_INFO="$OPTARG" ;;
@@ -102,6 +104,7 @@ NODE_OVERRIDE_PAT='/OMV.WorkspaceManager.registerNodeOverride\({/,/}\);/'
 PANEL_OVERRIDE_PAT='/OMV.WorkspaceManager.registerPanelOverride\({/,/}\);/'
 
 NEWPATH_PAT='s/.*newpath *: *"*\([0-9a-zA-Z/_]*\)"*,*.*/\1/'
+NEWID_PAT='s/.*newpath *: *"*\([0-9a-zA-Z/_]*\)"*,*.*/\1/'
 DEL_PAT='s/.*del *: *\([0-9a-zA-Z/_]*\),*.*/\1/'
 
 ################################################################################
@@ -194,6 +197,7 @@ function generate_override_cache() {
 			NODE_POSITION=$(echo "${NODE_VALUES}" | sed "${POSITION_PAT}")
 			
 			NODE_NEWPATH=$(echo "${NODE_VALUES}" | sed "${NEWPATH_PAT}")
+			NODE_NEWID=$(echo "${NODE_VALUES}" | sed "${NEWID_PAT}")
 			NODE_DEL=$(echo "${NODE_VALUES}" | sed "${DEL_PAT}")
 
 			[ "${NODE_ID}" == "${NODE_VALUES}" ] && NODE_ID=""
@@ -204,9 +208,10 @@ function generate_override_cache() {
 			[ "${NODE_POSITION}" == "${NODE_VALUES}" ] && NODE_POSITION="50"
 			
 			[ "${NODE_NEWPATH}" == "${NODE_VALUES}" ] && NODE_NEWPATH=""
+			[ "${NODE_NEWID}" == "${NODE_VALUES}" ] && NODE_NEWID=""
 			[ "${NODE_DEL}" == "${NODE_VALUES}" ] && NODE_DEL="false"
 			
-			echo "FILE=\"${FILENAME}\";NODES_CNT=\"${NODES_CNT}\";NODE_ID=\"${NODE_ID}\";NODE_PATH=\"${NODE_PATH}\";NODE_ICON16=\"${NODE_ICON16}\";NODE_ICONSVG=\"${NODE_ICONSVG}\";NODE_TEXT=\"${NODE_TEXT}\";NODE_POSITION=\"${NODE_POSITION}\";NODE_NEWPATH=\"${NODE_NEWPATH}\";NODE_DEL=\"${NODE_DEL}\";" >> ${NODE_OVERRIDE_FILE}
+			echo "FILE=\"${FILENAME}\";NODES_CNT=\"${NODES_CNT}\";NODE_ID=\"${NODE_ID}\";NODE_PATH=\"${NODE_PATH}\";NODE_ICON16=\"${NODE_ICON16}\";NODE_ICONSVG=\"${NODE_ICONSVG}\";NODE_TEXT=\"${NODE_TEXT}\";NODE_POSITION=\"${NODE_POSITION}\";NODE_NEWPATH=\"${NODE_NEWPATH}\";NODE_NEWID=\"${NODE_NEWID}\";NODE_DEL=\"${NODE_DEL}\";" >> ${NODE_OVERRIDE_FILE}
 
 			NODES_CNT=$(expr ${NODES_CNT} - 1)
 		done
@@ -224,6 +229,7 @@ function generate_override_cache() {
 			PANEL_CLASSNAME=$(echo "${PANEL_VALUES}" | sed "${CLASSNAME_PAT}")
 			
 			PANEL_NEWPATH=$(echo "${PANEL_VALUES}" | sed "${NEWPATH_PAT}")
+			PANEL_NEWID=$(echo "${PANEL_VALUES}" | sed "${NEWID_PAT}")
 			PANEL_DEL=$(echo "${PANEL_VALUES}" | sed "${DEL_PAT}")
 
 			[ "${PANEL_ID}" == "${PANEL_VALUES}" ] && PANEL_ID=""
@@ -233,9 +239,10 @@ function generate_override_cache() {
 			[ "${PANEL_CLASSNAME}" == "${PANEL_VALUES}" ] && PANEL_CLASSNAME=""
 			
 			[ "${PANEL_NEWPATH}" == "${NODE_VALUES}" ] && PANEL_NEWPATH=""
+			[ "${PANEL_NEWID}" == "${NODE_VALUES}" ] && PANEL_NEWID=""
 			[ "${PANEL_DEL}" == "${NODE_VALUES}" ] && PANEL_DEL="false"
 			
-			echo "FILE=\"${FILENAME}\";PANELS_CNT=\"${PANELS_CNT}\";PANEL_ID=\"${PANEL_ID}\";PANEL_PATH=\"${PANEL_PATH}\";PANEL_TEXT=\"${PANEL_TEXT}\";PANEL_POSITION=\"${PANEL_POSITION}\";PANEL_CLASSNAME=\"${PANEL_CLASSNAME}\";PANEL_NEWPATH=\"${PANEL_NEWPATH}\";PANEL_DEL=\"${PANEL_DEL}\";" >> ${PANEL_OVERRIDE_FILE}
+			echo "FILE=\"${FILENAME}\";PANELS_CNT=\"${PANELS_CNT}\";PANEL_ID=\"${PANEL_ID}\";PANEL_PATH=\"${PANEL_PATH}\";PANEL_TEXT=\"${PANEL_TEXT}\";PANEL_POSITION=\"${PANEL_POSITION}\";PANEL_CLASSNAME=\"${PANEL_CLASSNAME}\";PANEL_NEWPATH=\"${PANEL_NEWPATH}\";PANEL_NEWID=\"${PANEL_NEWID}\";PANEL_DEL=\"${PANEL_DEL}\";" >> ${PANEL_OVERRIDE_FILE}
 
 			PANELS_CNT=$(expr ${PANELS_CNT} - 1)
 		done
@@ -282,6 +289,52 @@ function list_all() {
 					printf ", "
 				fi
 				printf "{ \"type\":1, \"id\":\"${PANEL_ID}\", \"path\":\"${PANEL_PATH}\", \"text\":\"${PANEL_TEXT}\", \"position\":${PANEL_POSITION}, \"className\":\"${PANEL_CLASSNAME}\" }"
+			else
+				echo "${PANEL_PATH}/${PANEL_ID}"
+			fi
+			
+			NODECNT=$(expr ${NODECNT} + 1)
+			#break
+		#fi
+	done)
+	
+	
+	if [ "${MODE_JSON}" != "1" ]; then
+		printf "${RET}"
+		printf " ]"
+	else
+		echo "${RET}" | sort
+	fi
+}
+
+function list_all_overrides() {
+	if [ "${MODE_JSON}" != "1" ]; then
+		printf "[ "
+	fi
+	RET=$(IFS=$'\n'; 
+	NODECNT=0
+	for NODE in `cat ${NODE_OVERRIDE_FILE}`; do
+		eval "${NODE}"
+		NAME=$(get_name "${NODE_PATH}" "${NODE_ID}")
+		if [ "${MODE_JSON}" != "1" ]; then
+			if [ ${NODECNT} -gt 0 ]; then
+				printf ", "
+			fi
+			printf "{ \"type\":3, \"id\":\"${NODE_ID}\", \"path\":\"${NODE_PATH}\", \"text\":\"${NODE_TEXT}\", \"position\":${NODE_POSITION}, \"icon16\":\"${NODE_ICON16}\", \"iconSvg\":\"${NODE_ICONSVG}\", \"del\":\"${NODE_DEL}\", \"newpath\":\"${NODE_NEWPATH}\", \"newid\":\"${NODE_NEWID}\" }"
+		else
+			echo "${NAME}"
+		fi
+		NODECNT=$(expr ${NODECNT} + 1)
+		
+	done
+	for PANEL in `cat ${PANEL_OVERRIDE_FILE}`; do
+		eval "${PANEL}"
+		#if [ "${NAME}" == "${PANEL_PATH}" ]; then
+			if [ "${MODE_JSON}" != "1" ]; then
+				if [ ${NODECNT} -gt 0 ]; then
+					printf ", "
+				fi
+				printf "{ \"type\":4, \"id\":\"${PANEL_ID}\", \"path\":\"${PANEL_PATH}\", \"text\":\"${PANEL_TEXT}\", \"position\":${PANEL_POSITION}, \"className\":\"${PANEL_CLASSNAME}\", \"del\":\"${PANEL_DEL}\", \"newpath\":\"${PANEL_NEWPATH}\", \"newid\":\"${PANEL_NEWID}\" }"
 			else
 				echo "${PANEL_PATH}/${PANEL_ID}"
 			fi
@@ -510,21 +563,18 @@ function override() {
 if [ ! -f "${NODE_CACHE_FILE}" ] || [ ! -f "${PANEL_CACHE_FILE}" ]; then
 	clean_cache
 	generate_cache
-	OLDMODULEDIR="${MODULEDIR}"
-	[ -d "${OVERRIDEDIR}" ] && MODULEDIR="${OVERRIDEDIR}" && generate_cache
-	MODULEDIR="${OLDMODULEDIR}"
 	
 fi
 
 if [ ! -f "${NODE_OVERRIDE_FILE}" ] || [ ! -f "${PANEL_OVERRIDE_FILE}" ]; then
 	clean_override_cache
-	#generate_override_cache
 	OLDMODULEDIR="${MODULEDIR}"
 	[ -d "${OVERRIDEDIR}" ] && MODULEDIR="${OVERRIDEDIR}" && generate_override_cache
 	MODULEDIR="${OLDMODULEDIR}"
 fi
 
 [ "${LIST}" == "0" ] && list_all
+[ "${LIST_OVERRIDES}" == "0" ] && list_all_overrides
 [ "${LIST_NODES}" == "0" ] && list_nodes
 [ "${LIST_PANELS}" == "0" ] && list_panels
 [ -n "${TREE_ROOT}" ] && tree_root "${TREE_ROOT}"
