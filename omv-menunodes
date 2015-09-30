@@ -14,6 +14,7 @@ CACHEDIR="/var/cache/openmediavault"
 
 # Cache
 CLEAN=1
+CLEAN_OVERRIDES=1
 
 # Mode
 MODE_JSON=1
@@ -34,7 +35,7 @@ OVERRIDE_POSITION=""
 OVERRIDE_CLASS=""
 OVERRIDE_TEXT=""
 
-while getopts ":r:s:o:cjlLnpi:t:O:DP:N:C:T:" opt; do
+while getopts ":r:s:o:cCjlLnpi:t:O:DP:N:C:T:" opt; do
 	case $opt in
 		
 		# Folders
@@ -44,6 +45,7 @@ while getopts ":r:s:o:cjlLnpi:t:O:DP:N:C:T:" opt; do
 		
 		# Cache
 		c) CLEAN=0 ;;
+		C) CLEAN_OVERRIDES=0 ;;
 		
 		# Mode
 		j) MODE_JSON=0 ;;
@@ -558,7 +560,7 @@ function override() {
 ################################################################################
 
 [ "${CLEAN}" == "0" ] && clean_cache
-[ "${CLEAN}" == "0" ] && clean_override_cache
+[ "${CLEAN_OVERRIDES}" == "0" ] && clean_override_cache
 
 if [ ! -f "${NODE_CACHE_FILE}" ] || [ ! -f "${PANEL_CACHE_FILE}" ]; then
 	clean_cache
