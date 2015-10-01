@@ -70,6 +70,18 @@ NODE_STRIP_PAT1='s/[[:space:]]*OMV.WorkspaceManager.register[0-9a-zA-Z]*({//'
 NODE_STRIP_PAT2='s/,*[[:space:]]*});*[[:space:]]*$//'
 #NODE_STRIP_PAT3='s/[[:space:]]*\(.*\):[[:space:]]*_(\(.*\))[[:space:]]*,\{0,1\}/\1: \2,/'
 
+FULLPATH_FUNCTION=$(cat <<EOF
+function p(a){
+	a.forEach(function(b){
+		if(typeof b.id != 'undefined' && typeof b.path != 'undefined'){
+			b.fullpath = (b.path==="/")?b.path+b.id:b.path+'/'+b.id;
+		}
+	});
+	return a;
+};
+EOF
+)
+
 OVERRIDE_FUNCTION=$(cat <<EOF
 function override(nodes, overrides) {
 	var PANEL_RESULT = [];
@@ -146,7 +158,7 @@ function scan_dir() {
 	local SEARCH_PAT="$2"
 	local APPEND="${3}"
 	local VALUES=$(_scan_dir "${FOLDER}" "${SEARCH_PAT}" "${APPEND}")
-	JSONSTR=$(echo "function _(s){return s;}; var o = [${VALUES}]; console.log(JSON.stringify(o));" | node)
+	JSONSTR=$(echo "function _(s){return s;}; ${FULLPATH_FUNCTION} var o = [${VALUES}]; console.log(JSON.stringify(p(o)));" | node)
 	[ "$?" == 0 ] && echo "${JSONSTR}"
 }
 
@@ -158,7 +170,7 @@ function scan_dirs() {
 	for FOLDER in ${FOLDERS}; do
 		VALUES+=$(_scan_dir "${FOLDER}" "${SEARCH_PAT}" "${APPEND}")
 	done
-	JSONSTR=$(echo "var o = [${VALUES}]; console.log(JSON.stringify(o));" | node)
+	JSONSTR=$(echo "function _(s){return s;}; ${FULLPATH_FUNCTION} var o = [${VALUES}]; console.log(JSON.stringify(p(o)));" | node)
 	[ "$?" == 0 ] && echo "${JSONSTR}"
 }
 
@@ -239,8 +251,6 @@ EOF
 
 ################################################################################
 
-START=$(date "+%s")
-
 [ "${CLEAN}" == "0" ] && clean_cache
 [ "${CLEAN_OVERRIDES}" == "0" ] && clean_override_cache
 
@@ -266,9 +276,6 @@ fi
 [ "${LIST_ALL}" == "0" ] && list_all && exit 0
 
 ################################################################################
-
-STOP=$(date "+%s")
-echo $(expr ${STOP} - ${START})
 
 exit 0
 
